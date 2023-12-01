@@ -34,8 +34,6 @@ bool g_runfuncs = false;
 //  reset it to NULL as appropriate
 struct local_state_s* g_finalstate = NULL;
 
-int g_CurrentWeaponId = WEAPON_NONE;
-
 /*
 ====================
 COM_Log

@@ -19,6 +19,7 @@
 #include "monsters.h"
 #include "weapons.h"
 #include "player.h"
+#include "UserMessages.h"
 
 LINK_ENTITY_TO_CLASS(weapon_glock, CGlock);
 LINK_ENTITY_TO_CLASS(weapon_9mmhandgun, CGlock);
@@ -33,6 +34,12 @@ void CGlock::Spawn()
 	m_iDefaultAmmo = GLOCK_DEFAULT_GIVE;
 
 	FallInit(); // get ready to fall down.
+}
+
+void CGlock::Holster()
+{
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+	SendWeaponAnim(GLOCK_HOLSTER);
 }
 
 
@@ -80,22 +87,22 @@ bool CGlock::Deploy()
 
 void CGlock::SecondaryAttack()
 {
-	GlockFire(0.1, 0.2, false);
+	GlockFire(0.05, 0.1, false);
 }
 
 void CGlock::PrimaryAttack()
 {
-	GlockFire(0.01, 0.3, true);
+	GlockFire(0.001, 0.2, true);
 }
 
 void CGlock::GlockFire(float flSpread, float flCycleTime, bool fUseAutoAim)
 {
 	if (m_iClip <= 0)
 	{
-		//if (m_fFireOnEmpty)
+		if (m_fFireOnEmpty)
 		{
 			PlayEmptySound();
-			m_flNextPrimaryAttack = m_flNextSecondaryAttack = GetNextAttackDelay(0.2);
+			m_flNextPrimaryAttack = GetNextAttackDelay(0.1);
 		}
 
 		return;
@@ -115,6 +122,21 @@ void CGlock::GlockFire(float flSpread, float flCycleTime, bool fUseAutoAim)
 
 	// player "shoot" animation
 	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
+
+#ifndef CLIENT_DLL
+	MESSAGE_BEGIN(MSG_BROADCAST, SVC_TEMPENTITY);
+	WRITE_BYTE(TE_DLIGHT);
+	WRITE_COORD(pev->origin.x); // origin
+	WRITE_COORD(pev->origin.y);
+	WRITE_COORD(pev->origin.z);
+	WRITE_BYTE(16);	 // radius
+	WRITE_BYTE(255); // R
+	WRITE_BYTE(255); // G
+	WRITE_BYTE(160); // B
+	WRITE_BYTE(0);	 // life * 10
+	WRITE_BYTE(0);	 // decay
+	MESSAGE_END();
+#endif
 
 	// silenced
 	if (pev->body == 1)
@@ -164,9 +186,9 @@ void CGlock::Reload()
 	bool iResult;
 
 	if (m_iClip == 0)
-		iResult = DefaultReload(17, GLOCK_RELOAD, 1.5);
+		iResult = DefaultReload(20, GLOCK_RELOAD, 0.5);
 	else
-		iResult = DefaultReload(17, GLOCK_RELOAD_NOT_EMPTY, 1.5);
+		iResult = DefaultReload(20, GLOCK_RELOAD_NOT_EMPTY, 0.5);
 
 	if (iResult)
 	{

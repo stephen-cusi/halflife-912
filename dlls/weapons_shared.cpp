@@ -170,18 +170,18 @@ void CBasePlayerWeapon::ItemPostFrame()
 
 		m_fFireOnEmpty = false;
 
+#ifndef CLIENT_DLL
 		if (!IsUseable() && m_flNextPrimaryAttack < (UseDecrement() ? 0.0 : gpGlobals->time))
 		{
-#ifndef CLIENT_DLL
 			// weapon isn't useable, switch.
 			if ((iFlags() & ITEM_FLAG_NOAUTOSWITCHEMPTY) == 0 && g_pGameRules->GetNextBestWeapon(m_pPlayer, this))
 			{
 				m_flNextPrimaryAttack = (UseDecrement() ? 0.0 : gpGlobals->time) + 0.3;
 				return;
 			}
-#endif
 		}
 		else
+#endif
 		{
 			// weapon is useable. Reload if empty and weapon has waited as long as it has to after firing
 			if (m_iClip == 0 && (iFlags() & ITEM_FLAG_NOAUTORELOAD) == 0 && m_flNextPrimaryAttack < (UseDecrement() ? 0.0 : gpGlobals->time))
@@ -220,23 +220,36 @@ void CBasePlayer::SelectLastItem()
 	if (m_pActiveItem)
 		m_pActiveItem->Holster();
 
+#ifdef USE_QUEUEITEM
+	QueueItem(m_pLastItem);
+#else
 	CBasePlayerItem* pTemp = m_pActiveItem;
 	m_pActiveItem = m_pLastItem;
 	m_pLastItem = pTemp;
+#endif
 
-	auto weapon = m_pActiveItem->GetWeaponPtr();
-
-	if (weapon)
+	if (m_pActiveItem)
 	{
-		weapon->m_ForceSendAnimations = true;
+		m_pActiveItem->m_ForceSendAnimations = true;
+		m_pActiveItem->Deploy();
+		m_pActiveItem->UpdateItemInfo();
+		m_pActiveItem->m_ForceSendAnimations = false;
 	}
+}
 
-	m_pActiveItem->Deploy();
-
-	if (weapon)
+void CBasePlayer::QueueItem(CBasePlayerItem* pItem)
+{
+#ifdef USE_QUEUEITEM
+	if (!m_pActiveItem) // no active weapon
 	{
-		weapon->m_ForceSendAnimations = false;
+		m_pActiveItem = pItem;
+		return; // just set this item as active
 	}
-
-	m_pActiveItem->UpdateItemInfo();
+	else
+	{
+		m_pLastItem = m_pActiveItem;
+		m_pActiveItem = NULL; // clear current
+	}
+	m_pNextItem = pItem; // add item to queue
+#endif
 }

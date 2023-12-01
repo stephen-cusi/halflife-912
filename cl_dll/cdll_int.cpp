@@ -23,6 +23,7 @@
 #include "netadr.h"
 #include "interface.h"
 //#include "vgui_schememanager.h"
+#include "mp3.h" //AJH - Killars MP3player
 
 #include "pm_shared.h"
 
@@ -38,6 +39,7 @@
 
 cl_enginefunc_t gEngfuncs;
 CHud gHUD;
+CMP3 gMP3; //AJH - Killars MP3player
 TeamFortressViewport* gViewPort = NULL;
 
 
@@ -148,7 +150,7 @@ int DLLEXPORT HUD_VidInit()
 	gHUD.VidInit();
 
 	VGui_Startup();
-
+	
 	return 1;
 }
 

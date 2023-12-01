@@ -31,6 +31,9 @@ struct skilldata_t
 
 	float barneyHealth;
 
+	float SB9E2Health;
+	float MatachuanHealth;
+
 	float bigmommaHealthFactor; // Multiply each node's health by this
 	float bigmommaDmgSlash;		// melee attack damage
 	float bigmommaDmgBlast;		// mortar attack damage
@@ -55,6 +58,11 @@ struct skilldata_t
 	float hgruntDmgKick;
 	float hgruntShotgunPellets;
 	float hgruntGrenadeSpeed;
+
+	float HGrunt9E2Health;
+	float HGrunt9E2DmgKick;
+	float HGrunt9E2ShotgunPellets;
+	float HGrunt9E2GrenadeSpeed;
 
 	float houndeyeHealth;
 	float houndeyeDmgBlast;

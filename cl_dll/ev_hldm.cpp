@@ -20,7 +20,6 @@
 #include "cbase.h"
 #include "weapons.h"
 
-#include "com_weapons.h"
 #include "const.h"
 #include "entity_state.h"
 #include "cl_entity.h"
@@ -522,6 +521,29 @@ void EV_FireGlock2(event_args_t* args)
 //======================
 
 //======================
+//	  GENERIC START
+//======================
+
+void EV_GenericFire1(struct event_args_s* args)
+{
+	//NULL EVENT
+}
+
+void EV_GenericFire2(struct event_args_s* args)
+{
+	//NULL EVENT
+}
+
+void EV_GenericFire3(struct event_args_s* args)
+{
+	//NULL EVENT
+}
+
+//======================
+//	   GENERIC END
+//======================
+
+//======================
 //	  SHOTGUN START
 //======================
 void EV_FireShotGunDouble(event_args_t* args)
@@ -712,6 +734,90 @@ void EV_FireMP52(event_args_t* args)
 }
 //======================
 //		 MP5 END
+//======================
+
+//======================
+//	    EHW HECU's Gun START
+//======================
+void EV_FireEHWSMG(event_args_t* args)
+{
+	int idx;
+	Vector origin;
+	Vector angles;
+	Vector velocity;
+
+	Vector ShellVelocity;
+	Vector ShellOrigin;
+	int shell;
+	Vector vecSrc, vecAiming;
+	Vector up, right, forward;
+
+	idx = args->entindex;
+	VectorCopy(args->origin, origin);
+	VectorCopy(args->angles, angles);
+	VectorCopy(args->velocity, velocity);
+
+	AngleVectors(angles, forward, right, up);
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex("models/shell.mdl"); // brass shell
+
+	if (EV_IsLocal(idx))
+	{
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation(EHWSMG_FIRE1 + gEngfuncs.pfnRandomLong(0, 2), 0);
+
+		V_PunchAxis(0, gEngfuncs.pfnRandomFloat(-2, 2));
+	}
+
+	EV_GetDefaultShellInfo(args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4);
+
+	EV_EjectBrass(ShellOrigin, ShellVelocity, angles[YAW], shell, TE_BOUNCE_SHELL);
+
+	switch (gEngfuncs.pfnRandomLong(0, 1))
+	{
+	case 0:
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong(0, 0xf));
+		break;
+	case 1:
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/hks2.wav", 1, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong(0, 0xf));
+		break;
+	}
+
+	EV_GetGunPosition(args, vecSrc, origin);
+	VectorCopy(forward, vecAiming);
+
+	EV_HLDM_FireBullets(idx, forward, right, up, 1, vecSrc, vecAiming, 8192, BULLET_PLAYER_MP5, 2, &tracerCount[idx - 1], args->fparam1, args->fparam2);
+}
+
+// We only predict the animation and sound
+// The grenade is still launched from the server.
+void EV_FireEHWSMG2(event_args_t* args)
+{
+	int idx;
+	Vector origin;
+
+	idx = args->entindex;
+	VectorCopy(args->origin, origin);
+
+	if (EV_IsLocal(idx))
+	{
+		gEngfuncs.pEventAPI->EV_WeaponAnimation(EHWSMG_LAUNCH, 0);
+		V_PunchAxis(0, -10);
+	}
+
+	switch (gEngfuncs.pfnRandomLong(0, 1))
+	{
+	case 0:
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/glauncher.wav", 1, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong(0, 0xf));
+		break;
+	case 1:
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/glauncher2.wav", 1, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong(0, 0xf));
+		break;
+	}
+}
+//======================
+//		 EHW HECU's Gun END
 //======================
 
 //======================
@@ -1078,44 +1184,6 @@ void EV_FireGauss(event_args_t* args)
 //======================
 
 //======================
-//	   CROWBAR START
-//======================
-int g_iSwing;
-
-//Only predict the miss sounds, hit sounds are still played
-//server side, so players don't get the wrong idea.
-void EV_Crowbar(event_args_t* args)
-{
-	int idx;
-	Vector origin;
-
-	idx = args->entindex;
-	VectorCopy(args->origin, origin);
-
-	//Play Swing sound
-	gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/cbar_miss1.wav", 1, ATTN_NORM, 0, PITCH_NORM);
-
-	if (EV_IsLocal(idx))
-	{
-		switch ((g_iSwing++) % 3)
-		{
-		case 0:
-			gEngfuncs.pEventAPI->EV_WeaponAnimation(CROWBAR_ATTACK1MISS, 0);
-			break;
-		case 1:
-			gEngfuncs.pEventAPI->EV_WeaponAnimation(CROWBAR_ATTACK2MISS, 0);
-			break;
-		case 2:
-			gEngfuncs.pEventAPI->EV_WeaponAnimation(CROWBAR_ATTACK3MISS, 0);
-			break;
-		}
-	}
-}
-//======================
-//	   CROWBAR END
-//======================
-
-//======================
 //	  CROSSBOW START
 //======================
 //=====================
@@ -1441,12 +1509,6 @@ void EV_EgonStop(event_args_t* args)
 
 			pFlare = NULL;
 		}
-
-		// HACK: only reset animation if the Egon is still equipped.
-		if (g_CurrentWeaponId == WEAPON_EGON)
-		{
-			gEngfuncs.pEventAPI->EV_WeaponAnimation(EGON_IDLE1, 0);
-		}
 	}
 }
 //======================
@@ -1530,6 +1592,59 @@ void EV_TripmineFire(event_args_t* args)
 }
 //======================
 //	   TRIPMINE END
+//======================
+
+//======================
+//	   MIRROR START
+//======================
+void EV_Mirror(event_args_t* args)
+{
+	Vector org;
+	bool bNew = true;
+
+	VectorCopy(args->origin, org);
+	float dist = (float)args->iparam1;
+	int type = args->iparam2;
+	int bEnabled = args->bparam1;
+
+	//we have mirror
+	if (gHUD.numMirrors)
+	{
+		for (int ic = 0; ic < 32; ic++)
+		{
+			if (gHUD.Mirrors[ic].origin[0] == org[0] && gHUD.Mirrors[ic].origin[1] == org[1] && gHUD.Mirrors[ic].origin[2] == org[2])
+			{
+				if (bEnabled && !gHUD.Mirrors[ic].enabled)
+					gHUD.numMirrors++;
+
+				else if (!bEnabled && gHUD.Mirrors[ic].enabled)
+					gHUD.numMirrors--;
+
+				gHUD.Mirrors[ic].enabled = bEnabled;
+				bNew = false;
+				break;
+			}
+		}
+	}
+
+	if (bNew)
+	{
+		if (gHUD.numMirrors >= 32)
+			CONPRINT("ERROR: Can't register mirror, maximum 32 allowed!\n");
+
+		else
+		{
+			VectorCopy(org, gHUD.Mirrors[gHUD.numMirrors].origin);
+			gHUD.Mirrors[gHUD.numMirrors].type = type;
+			gHUD.Mirrors[gHUD.numMirrors].enabled = bEnabled;
+			gHUD.Mirrors[gHUD.numMirrors].radius = dist;
+			gHUD.numMirrors++;
+		}
+	}
+}
+
+//======================
+//	   MIRROR END
 //======================
 
 //======================

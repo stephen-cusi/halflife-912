@@ -38,11 +38,12 @@ void Game_HookEvents()
 	gEngfuncs.pfnHookEvent("events/shotgun2.sc", EV_FireShotGunDouble);
 	gEngfuncs.pfnHookEvent("events/mp5.sc", EV_FireMP5);
 	gEngfuncs.pfnHookEvent("events/mp52.sc", EV_FireMP52);
+	gEngfuncs.pfnHookEvent("events/ehw_smg.sc", EV_FireEHWSMG);
+	gEngfuncs.pfnHookEvent("events/ehw_smg2.sc", EV_FireEHWSMG2);
 	gEngfuncs.pfnHookEvent("events/python.sc", EV_FirePython);
 	gEngfuncs.pfnHookEvent("events/gauss.sc", EV_FireGauss);
 	gEngfuncs.pfnHookEvent("events/gaussspin.sc", EV_SpinGauss);
 	gEngfuncs.pfnHookEvent("events/train.sc", EV_TrainPitchAdjust);
-	gEngfuncs.pfnHookEvent("events/crowbar.sc", EV_Crowbar);
 	gEngfuncs.pfnHookEvent("events/crossbow1.sc", EV_FireCrossbow);
 	gEngfuncs.pfnHookEvent("events/crossbow2.sc", EV_FireCrossbow2);
 	gEngfuncs.pfnHookEvent("events/rpg.sc", EV_FireRpg);
@@ -51,4 +52,8 @@ void Game_HookEvents()
 	gEngfuncs.pfnHookEvent("events/firehornet.sc", EV_HornetGunFire);
 	gEngfuncs.pfnHookEvent("events/tripfire.sc", EV_TripmineFire);
 	gEngfuncs.pfnHookEvent("events/snarkfire.sc", EV_SnarkFire);
+	gEngfuncs.pfnHookEvent("events/mirror.sc", EV_Mirror);
+	gEngfuncs.pfnHookEvent("events/generic1.sc", EV_GenericFire1);
+	gEngfuncs.pfnHookEvent("events/generic2.sc", EV_GenericFire2);
+	gEngfuncs.pfnHookEvent("events/generic3.sc", EV_GenericFire3);
 }

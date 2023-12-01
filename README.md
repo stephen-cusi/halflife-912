@@ -12,20 +12,9 @@ The goal of the Updated repositories is to allow modders to make mods based on t
 
 This mod installation includes files that are required when making a mod based on these SDKs.
 
-The following types of changes are **in scope** for this project:
-* Bug fixes
-* Features to improve the game's code (refactoring, generalizing, simplifying). This does not include complete redesigns of systems as this makes it much harder for modders to integrate changes and get started with Half-Life modding
-* Fixing game-breaking bugs in game assets (e.g. soft-locked trigger setups)
-
-The following types of changes are **out of scope**:
-* Graphical upgrades
-* Physics engine changes
-* Other engine changes
-* Gameplay changes
+The **scope** of the Updated projects is **limited to bug fixes**, **feature requests to improve the game's code** and **fixing game-breaking bugs in the game assets** (e.g. soft-locked trigger setups). Changes like **graphical upgrades**, **physics engine changes** and other **engine changes** are **out of scope**.
 
 If you need help setting up the SDK or developing a mod please ask on the [TWHL website](https://twhl.info/) or on its [Discord server](https://discord.gg/jEw8EqD).
-
-The TWHL wiki has tutorials to guide you through making a mod: https://twhl.info/wiki/page/Half-Life_Programming_-_Getting_Started
 
 See the `#welcome` channel for more information about the Discord server. Please do not use the `#unified-sdk` channel for general help requests, there are channels for modding help.
 
@@ -69,7 +58,7 @@ Unlike the other updated repositories these only provide basic fixes. No further
 Changelog
 ======================
 
-See [CHANGELOG.md](CHANGELOG.md) and [FULL_UPDATED_CHANGELOG.md](FULL_UPDATED_CHANGELOG.md)
+See [CHANGELOG.md](CHANGELOG.md) and [FULL_CHANGELOG.md](FULL_CHANGELOG.md)
 
 Half Life 1 SDK LICENSE
 ======================
@@ -128,3 +117,7 @@ There are basic rules of conduct that should be followed at all times by everyon
 - Do not repeatedly update an open issue remarking that the issue persists.
 
 Remember: Just because the issue you reported was reported here does not mean that it is an issue with Half-Life.  As well, should your issue not be resolved immediately, it does not mean that a resolution is not being researched or tested.  Patience is always appreciated.
+
+
+//9E2's Tale Code Brench
+use twhl source code

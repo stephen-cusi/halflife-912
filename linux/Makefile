@@ -29,7 +29,7 @@ ifeq "$(COMPILER)" ""
 endif
 
 CPLUS="$(COMPILER) -m32"
-CPP_LIB:=-L$(shell g++ -m32 -print-file-name=libstdc++.so | xargs dirname) -lstdc++ -ldl -lpthread -static-libstdc++ -static-libgcc
+CPP_LIB:=-L$(shell g++ -m32 -print-file-name=libstdc++.so | xargs dirname) -lstdc++ -ldl -lpthread
 
 ARCH_CFLAGS=-march=pentium-m -mfpmath=387 -mno-sse
 
@@ -41,12 +41,6 @@ endif
 
 BASE_CFLAGS=-std=c++17 -fpermissive -fno-strict-aliasing -fno-exceptions -fexpensive-optimizations -Werror=return-type -w
 BASE_CFLAGS+=-DNDEBUG -DPOSIX -D_POSIX -DLINUX -D_LINUX -DGNUC -DNO_MALLOC_OVERRIDE -DCLIENT_WEAPONS
-
-# flifetime-dse=1 is needed to disable a compiler optimization that optimizes out std::memset calls in CBaseEntity::operator new
-# See https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html#index-flifetime-dse for more information about the flifetime-dse flag
-ifeq "$(COMPILER)" "g++"
-	BASE_CFLAGS+=-flifetime-dse=1
-endif
 
 SHLIBEXT=so
 SHLIBCFLAGS=

@@ -43,6 +43,7 @@ static CBasePlayer player;
 static globalvars_t Globals;
 
 static CBasePlayerWeapon* g_pWpns[MAX_WEAPONS];
+int g_iWaterLevel; //LRC - for DMC fog
 
 float g_flApplyVel = 0.0;
 bool g_irunninggausspred = false;
@@ -54,6 +55,7 @@ CGlock g_Glock;
 CCrowbar g_Crowbar;
 CPython g_Python;
 CMP5 g_Mp5;
+CEHWSMG g_Ehwsmg;
 CCrossbow g_Crossbow;
 CShotgun g_Shotgun;
 CRpg g_Rpg;
@@ -144,7 +146,7 @@ void HUD_PrepEntity(CBaseEntity* pEntity, CBasePlayer* pWeaponOwner)
 
 /*
 =====================
-CBaseEntity:: Killed
+CBaseEntity::Killed
 
 If weapons code "kills" an entity, just set its effects to EF_NODRAW
 =====================
@@ -154,9 +156,17 @@ void CBaseEntity::Killed(entvars_t* pevAttacker, int iGib)
 	pev->effects |= EF_NODRAW;
 }
 
+
+//LRC
+void CBasePlayerWeapon::SetNextThink(float delay)
+{
+	m_fNextThink = UTIL_WeaponTimeBase() + delay;
+	pev->nextthink = m_fNextThink;
+}
+
 /*
 =====================
-CBasePlayerWeapon:: DefaultDeploy
+CBasePlayerWeapon::DefaultDeploy
 
 =====================
 */
@@ -177,7 +187,7 @@ bool CBasePlayerWeapon::DefaultDeploy(const char* szViewModel, const char* szWea
 
 /*
 =====================
-CBasePlayerWeapon:: PlayEmptySound
+CBasePlayerWeapon::PlayEmptySound
 
 =====================
 */
@@ -301,6 +311,8 @@ void CBasePlayer::Killed(entvars_t* pevAttacker, int iGib)
 	if (m_pActiveItem)
 		m_pActiveItem->Holster();
 
+	m_pNextItem = NULL;
+
 	g_irunninggausspred = false;
 }
 
@@ -312,9 +324,13 @@ CBasePlayer::Spawn
 */
 void CBasePlayer::Spawn()
 {
-	if (m_pActiveItem)
+	if (m_pActiveItem && m_pNextItem)
+	{
+		m_pActiveItem = m_pNextItem;
 		m_pActiveItem->Deploy();
-
+		m_pActiveItem->UpdateItemInfo();
+		m_pNextItem = NULL;
+	}
 	g_irunninggausspred = false;
 }
 
@@ -454,6 +470,7 @@ void HUD_InitClientWeapons()
 	HUD_PrepEntity(&g_Crowbar, &player);
 	HUD_PrepEntity(&g_Python, &player);
 	HUD_PrepEntity(&g_Mp5, &player);
+	HUD_PrepEntity(&g_Ehwsmg, &player);
 	HUD_PrepEntity(&g_Crossbow, &player);
 	HUD_PrepEntity(&g_Shotgun, &player);
 	HUD_PrepEntity(&g_Rpg, &player);
@@ -464,6 +481,7 @@ void HUD_InitClientWeapons()
 	HUD_PrepEntity(&g_Satchel, &player);
 	HUD_PrepEntity(&g_Tripmine, &player);
 	HUD_PrepEntity(&g_Snark, &player);
+	HUD_PrepEntity(&g_Ehwsmg, &player);
 }
 
 /*
@@ -545,6 +563,10 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 
 	case WEAPON_MP5:
 		pWeapon = &g_Mp5;
+		break;
+
+	case WEAPON_EHWSMG:
+		pWeapon = &g_Ehwsmg;
 		break;
 
 	case WEAPON_CROSSBOW:
@@ -667,7 +689,7 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 	player.pev->flags = from->client.flags;
 
 	player.pev->deadflag = from->client.deadflag;
-	player.pev->waterlevel = from->client.waterlevel;
+	g_iWaterLevel = player.pev->waterlevel = from->client.waterlevel; //LRC - for DMC fog
 	player.pev->maxspeed = from->client.maxspeed;
 	player.m_iFOV = from->client.fov;
 	player.pev->weaponanim = from->client.weaponanim;
@@ -926,5 +948,4 @@ void DLLEXPORT HUD_PostRunCmd(struct local_state_s* from, struct local_state_s* 
 
 	// All games can use FOV state
 	g_lastFOV = to->client.fov;
-	g_CurrentWeaponId = to->client.m_iId;
 }

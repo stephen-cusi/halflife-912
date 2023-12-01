@@ -34,6 +34,15 @@
 #define bits_SLOT_HGRUNT_GRENADE2 (1 << 3)
 #define bits_SLOTS_HGRUNT_GRENADE (bits_SLOT_HGRUNT_GRENADE1 | bits_SLOT_HGRUNT_GRENADE2)
 
+// HUMAN GRUNT 9E2 SLOTS
+#define bits_SLOT_EHWHECU_ENGAGE1 (1 << 0)
+#define bits_SLOT_EHWHECU_ENGAGE2 (1 << 1)
+#define bits_SLOTS_EHWHECU_ENGAGE (bits_SLOT_EHWHECU_ENGAGE1 | bits_SLOT_EHWHECU_ENGAGE2)
+
+#define bits_SLOT_EHWHECU_GRENADE1 (1 << 2)
+#define bits_SLOT_EHWHECU_GRENADE2 (1 << 3)
+#define bits_SLOTS_EHWHECU_GRENADE (bits_SLOT_EHWHECU_GRENADE1 | bits_SLOT_EHWHECU_GRENADE2)
+
 // ALIEN GRUNT SLOTS
 #define bits_SLOT_AGRUNT_HORNET1 (1 << 4)
 #define bits_SLOT_AGRUNT_HORNET2 (1 << 5)
@@ -76,6 +85,7 @@ public:
 	void Killed(entvars_t* pevAttacker, int iGib) override;
 	bool OccupySlot(int iDesiredSlot);
 	bool NoFriendlyFire();
+	bool NoFriendlyFire(bool playerAlly);
 
 	// squad functions still left in base class
 	CSquadMonster* MySquadLeader()

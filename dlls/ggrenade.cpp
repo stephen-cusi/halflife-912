@@ -91,11 +91,7 @@ void CGrenade::Explode(TraceResult* pTrace, int bitsDamageType)
 
 	pev->owner = NULL; // can't traceline attack owner if this is set
 
-	// Counteract the + 1 in RadiusDamage.
-	Vector origin = pev->origin;
-	origin.z -= 1;
-
-	RadiusDamage(origin, pev, pevOwner, pev->dmg, CLASS_NONE, bitsDamageType);
+	RadiusDamage(pev, pevOwner, pev->dmg, CLASS_NONE, bitsDamageType);
 
 	if (RANDOM_FLOAT(0, 1) < 0.5)
 	{
@@ -124,7 +120,7 @@ void CGrenade::Explode(TraceResult* pTrace, int bitsDamageType)
 	pev->effects |= EF_NODRAW;
 	SetThink(&CGrenade::Smoke);
 	pev->velocity = g_vecZero;
-	pev->nextthink = gpGlobals->time + 0.3;
+	SetNextThink(0.3);
 
 	if (iContents != CONTENTS_WATER)
 	{
@@ -166,7 +162,7 @@ void CGrenade::Killed(entvars_t* pevAttacker, int iGib)
 void CGrenade::DetonateUse(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
 {
 	SetThink(&CGrenade::Detonate);
-	pev->nextthink = gpGlobals->time;
+	SetNextThink(0);
 }
 
 void CGrenade::PreDetonate()
@@ -174,7 +170,7 @@ void CGrenade::PreDetonate()
 	CSoundEnt::InsertSound(bits_SOUND_DANGER, pev->origin, 400, 0.3);
 
 	SetThink(&CGrenade::Detonate);
-	pev->nextthink = gpGlobals->time + 1;
+	SetNextThink(1);
 }
 
 
@@ -216,9 +212,9 @@ void CGrenade::DangerSoundThink()
 	}
 
 	CSoundEnt::InsertSound(bits_SOUND_DANGER, pev->origin + pev->velocity * 0.5, pev->velocity.Length(), 0.2);
-	pev->nextthink = gpGlobals->time + 0.2;
+	SetNextThink(0.2);
 
-	if (pev->waterlevel != 0)
+	if (pev->waterlevel != 0 && pev->watertype > CONTENT_FLYFIELD)
 	{
 		pev->velocity = pev->velocity * 0.5;
 	}
@@ -272,7 +268,6 @@ void CGrenade::BounceTouch(CBaseEntity* pOther)
 		pev->velocity = pev->velocity * 0.8;
 
 		pev->sequence = RANDOM_LONG(1, 1);
-		ResetSequenceInfo();
 	}
 	else
 	{
@@ -337,7 +332,7 @@ void CGrenade::TumbleThink()
 	}
 
 	StudioFrameAdvance();
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink(0.1);
 
 	if (pev->dmgtime - 1 < gpGlobals->time)
 	{
@@ -348,7 +343,7 @@ void CGrenade::TumbleThink()
 	{
 		SetThink(&CGrenade::Detonate);
 	}
-	if (pev->waterlevel != 0)
+	if (pev->waterlevel != 0 && pev->watertype > CONTENT_FLYFIELD)
 	{
 		pev->velocity = pev->velocity * 0.5;
 		pev->framerate = 0.2;
@@ -377,14 +372,14 @@ CGrenade* CGrenade::ShootContact(entvars_t* pevOwner, Vector vecStart, Vector ve
 	pGrenade->Spawn();
 	// contact grenades arc lower
 	pGrenade->pev->gravity = 0.5; // lower gravity since grenade is aerodynamic and engine doesn't know it.
-	UTIL_SetOrigin(pGrenade->pev, vecStart);
+	UTIL_SetOrigin(pGrenade, vecStart);
 	pGrenade->pev->velocity = vecVelocity;
 	pGrenade->pev->angles = UTIL_VecToAngles(pGrenade->pev->velocity);
 	pGrenade->pev->owner = ENT(pevOwner);
 
 	// make monsters afaid of it while in the air
 	pGrenade->SetThink(&CGrenade::DangerSoundThink);
-	pGrenade->pev->nextthink = gpGlobals->time;
+	pGrenade->SetNextThink(0);
 
 	// Tumble in air
 	pGrenade->pev->avelocity.x = RANDOM_FLOAT(-100, -500);
@@ -402,7 +397,7 @@ CGrenade* CGrenade::ShootTimed(entvars_t* pevOwner, Vector vecStart, Vector vecV
 {
 	CGrenade* pGrenade = GetClassPtr((CGrenade*)NULL);
 	pGrenade->Spawn();
-	UTIL_SetOrigin(pGrenade->pev, vecStart);
+	UTIL_SetOrigin(pGrenade, vecStart);
 	pGrenade->pev->velocity = vecVelocity;
 	pGrenade->pev->angles = UTIL_VecToAngles(pGrenade->pev->velocity);
 	pGrenade->pev->owner = ENT(pevOwner);
@@ -415,17 +410,15 @@ CGrenade* CGrenade::ShootTimed(entvars_t* pevOwner, Vector vecStart, Vector vecV
 
 	pGrenade->pev->dmgtime = gpGlobals->time + time;
 	pGrenade->SetThink(&CGrenade::TumbleThink);
-	pGrenade->pev->nextthink = gpGlobals->time + 0.1;
+	pGrenade->SetNextThink(0.1);
 	if (time < 0.1)
 	{
-		pGrenade->pev->nextthink = gpGlobals->time;
+		pGrenade->SetNextThink(0);
 		pGrenade->pev->velocity = Vector(0, 0, 0);
 	}
 
-	SET_MODEL(ENT(pGrenade->pev), "models/w_grenade.mdl");
 	pGrenade->pev->sequence = RANDOM_LONG(3, 6);
 	pGrenade->pev->framerate = 1.0;
-	pGrenade->ResetSequenceInfo();
 
 	// Tumble through the air
 	// pGrenade->pev->avelocity.x = -400;
@@ -433,6 +426,7 @@ CGrenade* CGrenade::ShootTimed(entvars_t* pevOwner, Vector vecStart, Vector vecV
 	pGrenade->pev->gravity = 0.5;
 	pGrenade->pev->friction = 0.8;
 
+	SET_MODEL(ENT(pGrenade->pev), "models/w_grenade.mdl");
 	pGrenade->pev->dmg = 100;
 
 	return pGrenade;
@@ -452,7 +446,7 @@ CGrenade* CGrenade::ShootSatchelCharge(entvars_t* pevOwner, Vector vecStart, Vec
 	UTIL_SetSize(pGrenade->pev, Vector(0, 0, 0), Vector(0, 0, 0));
 
 	pGrenade->pev->dmg = 200;
-	UTIL_SetOrigin(pGrenade->pev, vecStart);
+	UTIL_SetOrigin(pGrenade, vecStart);
 	pGrenade->pev->velocity = vecVelocity;
 	pGrenade->pev->angles = g_vecZero;
 	pGrenade->pev->owner = ENT(pevOwner);
@@ -472,7 +466,6 @@ CGrenade* CGrenade::ShootSatchelCharge(entvars_t* pevOwner, Vector vecStart, Vec
 
 void CGrenade::UseSatchelCharges(entvars_t* pevOwner, SATCHELCODE code)
 {
-	edict_t* pentFind;
 	edict_t* pentOwner;
 
 	if (!pevOwner)
@@ -482,21 +475,17 @@ void CGrenade::UseSatchelCharges(entvars_t* pevOwner, SATCHELCODE code)
 
 	pentOwner = pOwner->edict();
 
-	pentFind = FIND_ENTITY_BY_CLASSNAME(NULL, "grenade");
-	while (!FNullEnt(pentFind))
+	CBaseEntity* pEnt = UTIL_FindEntityByClassname(NULL, "grenade");
+	while (pEnt)
 	{
-		CBaseEntity* pEnt = Instance(pentFind);
-		if (pEnt)
+		if (FBitSet(pEnt->pev->spawnflags, SF_DETONATE) && pEnt->pev->owner == pentOwner)
 		{
-			if (FBitSet(pEnt->pev->spawnflags, SF_DETONATE) && pEnt->pev->owner == pentOwner)
-			{
-				if (code == SATCHEL_DETONATE)
-					pEnt->Use(pOwner, pOwner, USE_ON, 0);
-				else // SATCHEL_RELEASE
-					pEnt->pev->owner = NULL;
-			}
+			if (code == SATCHEL_DETONATE)
+				pEnt->Use(pOwner, pOwner, USE_ON, 0);
+			else // SATCHEL_RELEASE
+				pEnt->pev->owner = NULL;
 		}
-		pentFind = FIND_ENTITY_BY_CLASSNAME(pentFind, "grenade");
+		pEnt = UTIL_FindEntityByClassname(pEnt, "grenade");
 	}
 }
 

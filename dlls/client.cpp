@@ -23,15 +23,9 @@
 
 */
 
-#include <algorithm>
-#include <string>
-#include <vector>
-
 #include "extdll.h"
 #include "util.h"
-#include "filesystem_utils.h"
 #include "cbase.h"
-#include "com_model.h"
 #include "saverestore.h"
 #include "player.h"
 #include "spectator.h"
@@ -45,8 +39,9 @@
 #include "usercmd.h"
 #include "netadr.h"
 #include "pm_shared.h"
-#include "pm_defs.h"
 #include "UserMessages.h"
+#include "movewith.h"
+#include "items.h"
 
 DLL_GLOBAL unsigned int g_ulFrameCount;
 
@@ -124,7 +119,7 @@ void ClientDisconnect(edict_t* pEntity)
 	// since the edict doesn't get deleted, fix it so it doesn't interfere.
 	pEntity->v.takedamage = DAMAGE_NO; // don't attract autoaim
 	pEntity->v.solid = SOLID_NOT;	   // nonsolid
-	UTIL_SetOrigin(&pEntity->v, pEntity->v.origin);
+	UTIL_SetEdictOrigin(pEntity, pEntity->v.origin);
 
 	auto pPlayer = reinterpret_cast<CBasePlayer*>(GET_PRIVATE(pEntity));
 
@@ -499,6 +494,8 @@ ClientCommand
 called each time a player uses a "cmd" command
 ============
 */
+extern int gmsgPlayMP3; //AJH - Killars MP3player
+
 // Use CMD_ARGV,  CMD_ARGV, and CMD_ARGC to get pointers the character string command.
 void ClientCommand(edict_t* pEntity)
 {
@@ -513,7 +510,57 @@ void ClientCommand(edict_t* pEntity)
 
 	auto player = GetClassPtr<CBasePlayer>(reinterpret_cast<CBasePlayer*>(&pEntity->v));
 
-	if (FStrEq(pcmd, "say"))
+	if (FStrEq(pcmd, "VModEnable")) //LRC - shut up about VModEnable...
+	{
+		return;
+	}
+	else if (FStrEq(pcmd, "hud_color")) //LRC
+	{
+		if (CMD_ARGC() == 4)
+		{
+			int col = (atoi(CMD_ARGV(1)) & 255) << 16;
+			col += (atoi(CMD_ARGV(2)) & 255) << 8;
+			col += (atoi(CMD_ARGV(3)) & 255);
+			MESSAGE_BEGIN(MSG_ONE, gmsgHUDColor, NULL, &pEntity->v);
+			WRITE_LONG(col);
+			MESSAGE_END();
+		}
+		else
+		{
+			ALERT(at_console, "Syntax: hud_color RRR GGG BBB\n");
+		}
+	}
+	else if (FStrEq(pcmd, "fire")) //LRC - trigger entities manually
+	{
+		if (g_psv_cheats->value)
+		{
+			CBaseEntity* pPlayer = CBaseEntity::Instance(pEntity);
+			if (CMD_ARGC() > 1)
+			{
+				FireTargets(CMD_ARGV(1), pPlayer, pPlayer, USE_TOGGLE, 0);
+			}
+			else
+			{
+				TraceResult tr;
+				UTIL_MakeVectors(pev->v_angle);
+				UTIL_TraceLine(
+					pev->origin + pev->view_ofs,
+					pev->origin + pev->view_ofs + gpGlobals->v_forward * 1000,
+					dont_ignore_monsters, pEntity, &tr);
+
+				if (tr.pHit)
+				{
+					CBaseEntity* pHitEnt = CBaseEntity::Instance(tr.pHit);
+					if (pHitEnt)
+					{
+						pHitEnt->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+						ClientPrint(&pEntity->v, HUD_PRINTCONSOLE, UTIL_VarArgs("Fired %s \"%s\"\n", STRING(pHitEnt->pev->classname), STRING(pHitEnt->pev->targetname)));
+					}
+				}
+			}
+		}
+	}
+	else if (FStrEq(pcmd, "say"))
 	{
 		Host_Say(pEntity, false);
 	}
@@ -524,6 +571,87 @@ void ClientCommand(edict_t* pEntity)
 	else if (FStrEq(pcmd, "fullupdate"))
 	{
 		player->ForceClientDllUpdate();
+	}
+	else if (FStrEq(pcmd, "playaudio")) //AJH - MP3/OGG player (based on killars MP3)
+	{
+		MESSAGE_BEGIN(MSG_ONE, gmsgPlayMP3, NULL, ENT(pev));
+		WRITE_STRING((char*)CMD_ARGV(1));
+		MESSAGE_END();
+	}
+	else if (FStrEq(pcmd, "inventory")) //AJH - Inventory system
+	{
+		CBasePlayer* pPlayer = (CBasePlayer*)CBaseEntity::Instance(pEntity);
+		if (CMD_ARGC() > 1)
+		{
+			if (FStrEq(CMD_ARGV(1), "1"))
+			{
+				//	ALERT(at_debug,"DEBUG: calling medkit::use()\n");
+				GetClassPtr((CItemMedicalKit*)NULL)->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+			}
+			else if (FStrEq(CMD_ARGV(1), "2"))
+			{
+				//	ALERT(at_debug,"DEBUG: calling antitox::use()\n");
+				GetClassPtr((CItemAntidote*)NULL)->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+			}
+			else if (FStrEq(CMD_ARGV(1), "3"))
+			{
+				//	ALERT(at_debug,"DEBUG: calling antirad::use()\n");
+				GetClassPtr((CItemAntiRad*)NULL)->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+			}
+			else if (FStrEq(CMD_ARGV(1), "6"))
+			{
+				//	ALERT(at_debug,"DEBUG: calling flare::use()\n");
+				GetClassPtr((CItemFlare*)NULL)->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+			}
+			else if (FStrEq(CMD_ARGV(1), "7"))
+			{
+				if (pPlayer->m_pItemCamera != NULL)
+				{
+
+					if (CMD_ARGC() > 2)				  // If we have a specific usetype command
+					{								  // (possibly consider letting the player jump between active cameras using a third parameter)
+						if (FStrEq(CMD_ARGV(2), "2")) //View from Camera
+						{
+							pPlayer->m_pItemCamera->Use(pPlayer, pPlayer, USE_SET, 2);
+						}
+						else if (FStrEq(CMD_ARGV(2), "3")) //Back to normal view (don't delete camera)
+						{
+							pPlayer->m_pItemCamera->Use(pPlayer, pPlayer, USE_SET, 3);
+						}
+						else if (FStrEq(CMD_ARGV(2), "0")) //Back to normal view (delete camera)
+						{
+							pPlayer->m_pItemCamera->Use(pPlayer, pPlayer, USE_SET, 0);
+						}
+						//	else if (FStrEq(CMD_ARGV(2),"1")) //Move camera to current position (uncomment if you want to use this)
+						//	{
+						//		pPlayer->m_pItemCamera->Use(pPlayer,pPlayer,USE_SET,1);
+						//	}
+					}
+					else
+						pPlayer->m_pItemCamera->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+				}
+				else
+					ALERT(at_console, "You must have a camera in your inventory before you can use one!\n");
+			}
+			else if (FStrEq(CMD_ARGV(1), "8"))
+			{
+				ALERT(at_console, "Note: This item (adrenaline syringe) is still to be implemented \n");
+			}
+			else if (FStrEq(CMD_ARGV(1), "9"))
+			{
+				ALERT(at_console, "Note: This item (site to site transporter) is still to be implemented \n");
+			}
+			else if (FStrEq(CMD_ARGV(1), "10"))
+			{
+				ALERT(at_console, "Note: This item (Lazarus stealth shield) is still to be implemented \n");
+			}
+			else
+			{
+				ALERT(at_debug, "DEBUG: Inventory item %s cannot be manually used.\n", CMD_ARGV(1));
+			}
+		}
+		else
+			ALERT(at_console, "Usage: inventory <itemnumber>\nItems are:\n\t1: Portable Medkit (Manual)\n2: AntiTox syringe (Automatic)\n3: AntiRad syringe (Automatic)\n7: Remote camera\n");
 	}
 	else if (FStrEq(pcmd, "give"))
 	{
@@ -683,6 +811,9 @@ static int g_serveractive = 0;
 
 void ServerDeactivate()
 {
+	// make sure they reinitialise the World in the next server
+	g_pWorld = NULL;
+
 	// It's possible that the engine will call this function more times than is necessary
 	//  Therefore, only run it one time for each call to ServerActivate
 	if (g_serveractive != 1)
@@ -722,7 +853,7 @@ void ServerActivate(edict_t* pEdictList, int edictCount, int clientMax)
 		}
 		else
 		{
-			ALERT(at_console, "Can't instance %s\n", STRING(pEdictList[i].v.classname));
+			ALERT(at_debug, "Can't instance %s\n", STRING(pEdictList[i].v.classname));
 		}
 	}
 
@@ -730,6 +861,9 @@ void ServerActivate(edict_t* pEdictList, int edictCount, int clientMax)
 	LinkUserMessages();
 }
 
+// a cached version of gpGlobals->frametime. The engine sets frametime to 0 if the player is frozen... so we just cache it in prethink,
+// allowing it to be restored later and used by CheckDesiredList.
+float cached_frametime = 0.0f;
 
 /*
 ================
@@ -745,6 +879,8 @@ void PlayerPreThink(edict_t* pEntity)
 
 	if (pPlayer)
 		pPlayer->PreThink();
+
+	cached_frametime = gpGlobals->frametime;
 }
 
 /*
@@ -761,6 +897,13 @@ void PlayerPostThink(edict_t* pEntity)
 
 	if (pPlayer)
 		pPlayer->PostThink();
+
+	// use the old frametime, even if the engine has reset it
+	gpGlobals->frametime = cached_frametime;
+
+	//LRC - moved to here from CBasePlayer::PostThink, so that
+	// things don't stop when the player dies
+	CheckDesiredList();
 }
 
 
@@ -779,102 +922,6 @@ void ParmsChangeLevel()
 		pSaveData->connectionCount = BuildChangeList(pSaveData->levelList, MAX_LEVEL_CONNECTIONS);
 }
 
-static std::vector<std::string> g_MapsToLoad;
-
-static void LoadNextMap()
-{
-	const std::string mapName = std::move(g_MapsToLoad.back());
-	g_MapsToLoad.pop_back();
-
-	pmove->Con_Printf("Loading map \"%s\" automatically (%d left)\n",
-		mapName.c_str(), static_cast<int>(g_MapsToLoad.size() + 1));
-
-	if (g_MapsToLoad.empty())
-	{
-		pmove->Con_Printf("Loading last map\n");
-		g_MapsToLoad.shrink_to_fit();
-	}
-
-	SERVER_COMMAND(UTIL_VarArgs("map \"%s\"\n", mapName.c_str()));
-}
-
-static void LoadAllMaps()
-{
-	if (!g_MapsToLoad.empty())
-	{
-		pmove->Con_Printf("Already loading all maps (%d remaining)\nUse sv_stop_loading_all_maps to stop\n",
-			static_cast<int>(g_MapsToLoad.size()));
-		return;
-	}
-
-	FileFindHandle_t handle = FILESYSTEM_INVALID_FIND_HANDLE;
-
-	const char* fileName = g_pFileSystem->FindFirst("maps/*.bsp", &handle);
-
-	if (fileName != nullptr)
-	{
-		do
-		{
-			std::string mapName = fileName;
-			mapName.resize(mapName.size() - 4);
-
-			if (std::find_if(g_MapsToLoad.begin(), g_MapsToLoad.end(), [=](const auto& candidate)
-					{ return 0 == stricmp(candidate.c_str(), mapName.c_str()); }) == g_MapsToLoad.end())
-			{
-				g_MapsToLoad.push_back(std::move(mapName));
-			}
-		} while ((fileName = g_pFileSystem->FindNext(handle)) != nullptr);
-
-		g_pFileSystem->FindClose(handle);
-
-		// Sort in reverse order so the first map in alphabetic order is loaded first.
-		std::sort(g_MapsToLoad.begin(), g_MapsToLoad.end(), [](const auto& lhs, const auto& rhs)
-			{ return rhs < lhs; });
-	}
-
-	if (!g_MapsToLoad.empty())
-	{
-		if (CMD_ARGC() == 2)
-		{
-			const char* firstMapToLoad = CMD_ARGV(1);
-
-			// Clear out all maps that would have been loaded before this one.
-			if (auto it = std::find(g_MapsToLoad.begin(), g_MapsToLoad.end(), firstMapToLoad);
-				it != g_MapsToLoad.end())
-			{
-				const std::size_t numberOfMapsToSkip = g_MapsToLoad.size() - (it - g_MapsToLoad.begin());
-
-				g_MapsToLoad.erase(it + 1, g_MapsToLoad.end());
-
-				pmove->Con_Printf("Skipping %d maps to start with \"%s\"\n",
-					static_cast<int>(numberOfMapsToSkip), g_MapsToLoad.back().c_str());
-			}
-			else
-			{
-				pmove->Con_Printf("Unknown map \"%s\", starting from beginning\n", firstMapToLoad);
-			}
-		}
-
-		pmove->Con_Printf("Loading %d maps one at a time to generate files\n", static_cast<int>(g_MapsToLoad.size()));
-
-		// Load the first map right now.
-		LoadNextMap();
-	}
-	else
-	{
-		pmove->Con_Printf("No maps to load\n");
-	}
-}
-
-void InitMapLoadingUtils()
-{
-	g_engfuncs.pfnAddServerCommand("sv_load_all_maps", &LoadAllMaps);
-	// Escape hatch in case the command is executed in error.
-	g_engfuncs.pfnAddServerCommand("sv_stop_loading_all_maps", []()
-		{ g_MapsToLoad.clear(); });
-}
-
-static bool g_LastAllowBunnyHoppingState = false;
 
 //
 // GLOBALS ASSUMED SET:  g_ulFrameCount
@@ -890,31 +937,8 @@ void StartFrame()
 	gpGlobals->teamplay = teamplay.value;
 	g_ulFrameCount++;
 
-	const bool allowBunnyHopping = sv_allowbunnyhopping.value != 0;
-
-	if (allowBunnyHopping != g_LastAllowBunnyHoppingState)
-	{
-		g_LastAllowBunnyHoppingState = allowBunnyHopping;
-
-		for (int i = 1; i <= gpGlobals->maxClients; ++i)
-		{
-			auto player = UTIL_PlayerByIndex(i);
-
-			if (!player)
-			{
-				continue;
-			}
-
-			g_engfuncs.pfnSetPhysicsKeyValue(player->edict(), "bj", UTIL_dtos1(allowBunnyHopping ? 1 : 0));
-		}
-	}
-
-	// If we're loading all maps then change maps after 3 seconds (time starts at 1)
-	// to give the game time to generate files.
-	if (!g_MapsToLoad.empty() && gpGlobals->time > 4)
-	{
-		LoadNextMap();
-	}
+	//	CheckDesiredList(); //LRC
+	CheckAssistList(); //LRC
 }
 
 
@@ -1019,7 +1043,6 @@ void ClientPrecache()
 	PRECACHE_SOUND("common/wpn_select.wav");
 	PRECACHE_SOUND("common/wpn_denyselect.wav");
 
-
 	// geiger sounds
 
 	PRECACHE_SOUND("player/geiger6.wav");
@@ -1045,7 +1068,7 @@ const char* GetGameDescription()
 	if (g_pGameRules) // this function may be called before the world has spawned, and the game rules initialized
 		return g_pGameRules->GetGameDescription();
 	else
-		return "Half-Life";
+		return GAME_NAME;
 }
 
 /*
@@ -1076,13 +1099,13 @@ void PlayerCustomization(edict_t* pEntity, customization_t* pCust)
 
 	if (!pPlayer)
 	{
-		ALERT(at_console, "PlayerCustomization:  Couldn't get player!\n");
+		ALERT(at_debug, "PlayerCustomization:  Couldn't get player!\n");
 		return;
 	}
 
 	if (!pCust)
 	{
-		ALERT(at_console, "PlayerCustomization:  NULL customization!\n");
+		ALERT(at_debug, "PlayerCustomization:  NULL customization!\n");
 		return;
 	}
 
@@ -1097,7 +1120,7 @@ void PlayerCustomization(edict_t* pEntity, customization_t* pCust)
 		// Ignore for now.
 		break;
 	default:
-		ALERT(at_console, "PlayerCustomization:  Unknown customization type!\n");
+		ALERT(at_debug, "PlayerCustomization:  Unknown customization type!\n");
 		break;
 	}
 }
@@ -1178,7 +1201,19 @@ void SetupVisibility(edict_t* pViewEntity, edict_t* pClient, unsigned char** pvs
 	{
 		pView = pViewEntity;
 	}
-
+	// for trigger_viewset
+	CBasePlayer* pPlayer = (CBasePlayer*)CBaseEntity::Instance((struct edict_s*)pClient);
+	if (pPlayer->viewFlags & 1) // custom view active
+	{
+		CBaseEntity* pViewEnt = UTIL_FindEntityByTargetname(NULL, STRING(pPlayer->viewEntity));
+		if (!FNullEnt(pViewEnt))
+		{
+			//	ALERT(at_console, "setting PAS/PVS to entity %s\n", STRING(pPlayer->viewEntity));
+			pView = pViewEnt->edict();
+		}
+		else
+			pPlayer->viewFlags = 0;
+	}
 	if ((pClient->v.flags & FL_PROXY) != 0)
 	{
 		*pvs = NULL; // the spectator proxy sees
@@ -1213,15 +1248,6 @@ we could also use the pas/ pvs that we set in SetupVisibility, if we wanted to. 
 */
 int AddToFullPack(struct entity_state_s* state, int e, edict_t* ent, edict_t* host, int hostflags, int player, unsigned char* pSet)
 {
-	// Entities with an index greater than this will corrupt the client's heap because 
-	// the index is sent with only 11 bits of precision (2^11 == 2048).
-	// So we don't send them, just like having too many entities would result
-	// in the entity not being sent.
-	if (e >= MAX_EDICTS)
-	{
-		return 0;
-	}
-
 	int i;
 
 	auto entity = reinterpret_cast<CBaseEntity*>(GET_PRIVATE(ent));
@@ -1247,7 +1273,8 @@ int AddToFullPack(struct entity_state_s* state, int e, edict_t* ent, edict_t* ho
 	{
 		if (!ENGINE_CHECK_VISIBILITY((const struct edict_s*)ent, pSet))
 		{
-			return 0;
+			if (ent->v.renderfx != kRenderFxEntInPVS)
+				return 0;
 		}
 	}
 
@@ -1389,6 +1416,7 @@ int AddToFullPack(struct entity_state_s* state, int e, edict_t* ent, edict_t* ho
 
 	// HACK:  Somewhat...
 	// Class is overridden for non-players to signify a breakable glass object ( sort of a class? )
+	// that's 'class' in the sense medic, engineer, etc... !! --LRC
 	if (0 == player)
 	{
 		state->playerclass = ent->v.playerclass;

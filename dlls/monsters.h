@@ -49,9 +49,13 @@
 #define SF_MONSTER_PRISONER 16 // monster won't attack anyone, no one will attacke him.
 //										32
 //										64
-#define SF_MONSTER_WAIT_FOR_SCRIPT 128 //spawnflag that makes monsters wait to check for attacking until the script is done or they've been attacked
-#define SF_MONSTER_PREDISASTER 256	   //this is a predisaster scientist or barney. Influences how they speak.
-#define SF_MONSTER_FADECORPSE 512	   // Fade out corpse after death
+#define SF_MONSTER_NO_YELLOW_BLOBS 128 //LRC- if the monster is stuck, don't give errors or show yellow blobs.
+//LRC- wasn't implemented. #define	SF_MONSTER_WAIT_FOR_SCRIPT		128 //spawnflag that makes monsters wait to check for attacking until the script is done or they've been attacked
+#define SF_MONSTER_PREDISASTER 256	//this is a predisaster scientist or barney. Influences how they speak.
+#define SF_MONSTER_FADECORPSE 512	// Fade out corpse after death
+#define SF_MONSTER_NO_WPN_DROP 1024 //LRC- never drop your weapon (player can't pick it up.)
+//LRC - this clashes with 'not in deathmatch'. Replaced with m_iPlayerReact.
+//#define SF_MONSTER_INVERT_PLAYERREACT	2048 //LRC- if this monster would usually attack the player, don't attack unless provoked. If you would usually NOT attack the player, attack him.
 #define SF_MONSTER_FALL_TO_GROUND 0x80000000
 
 // specialty spawnflags
@@ -86,7 +90,6 @@ Vector VecCheckToss(entvars_t* pev, const Vector& vecSpot1, Vector vecSpot2, flo
 Vector VecCheckThrow(entvars_t* pev, const Vector& vecSpot1, Vector vecSpot2, float flSpeed, float flGravityAdj = 1.0);
 extern void EjectBrass(const Vector& vecOrigin, const Vector& vecVelocity, float rotation, int model, int soundtype);
 extern void ExplodeModel(const Vector& vecOrigin, float speed, int model, int count);
-extern bool IsFacing(entvars_t* pevTest, const Vector& reference);
 
 bool FBoxVisible(entvars_t* pevLooker, entvars_t* pevTarget);
 bool FBoxVisible(entvars_t* pevLooker, entvars_t* pevTarget, Vector& vecTargetOrigin, float flSize = 0.0);
@@ -159,7 +162,9 @@ public:
 
 	int ObjectCaps() override { return (CBaseEntity::ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE; }
 	static void SpawnHeadGib(entvars_t* pevVictim);
+	static void SpawnHeadGib(entvars_t* pevVictim, const char* szGibModel);
 	static void SpawnRandomGibs(entvars_t* pevVictim, int cGibs, bool human);
+	static void SpawnRandomGibs(entvars_t* pevVictim, int cGibs, bool notfirst, const char* szGibModel); //LRC
 	static void SpawnStickyGibs(entvars_t* pevVictim, Vector vecOrigin, int cGibs);
 
 	int m_bloodColor;

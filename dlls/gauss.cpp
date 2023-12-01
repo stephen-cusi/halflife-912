@@ -143,7 +143,7 @@ void CGauss::PrimaryAttack()
 void CGauss::SecondaryAttack()
 {
 	// don't fire underwater
-	if (m_pPlayer->pev->waterlevel == 3)
+	if (m_pPlayer->pev->waterlevel == 3 && m_pPlayer->pev->watertype > CONTENT_FLYFIELD)
 	{
 		if (m_fInAttack != 0)
 		{
@@ -199,25 +199,22 @@ void CGauss::SecondaryAttack()
 	}
 	else
 	{
-		if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] > 0)
+		// during the charging process, eat one bit of ammo every once in a while
+		if (UTIL_WeaponTimeBase() >= m_pPlayer->m_flNextAmmoBurn && m_pPlayer->m_flNextAmmoBurn != 1000)
 		{
-			// during the charging process, eat one bit of ammo every once in a while
-			if (UTIL_WeaponTimeBase() >= m_pPlayer->m_flNextAmmoBurn && m_pPlayer->m_flNextAmmoBurn != 1000)
-			{
 #ifdef CLIENT_DLL
-				if (bIsMultiplayer())
+			if (bIsMultiplayer())
 #else
-				if (g_pGameRules->IsMultiplayer())
+			if (g_pGameRules->IsMultiplayer())
 #endif
-				{
-					m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
-					m_pPlayer->m_flNextAmmoBurn = UTIL_WeaponTimeBase() + 0.1;
-				}
-				else
-				{
-					m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
-					m_pPlayer->m_flNextAmmoBurn = UTIL_WeaponTimeBase() + 0.3;
-				}
+			{
+				m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
+				m_pPlayer->m_flNextAmmoBurn = UTIL_WeaponTimeBase() + 0.1;
+			}
+			else
+			{
+				m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
+				m_pPlayer->m_flNextAmmoBurn = UTIL_WeaponTimeBase() + 0.3;
 			}
 		}
 
@@ -244,7 +241,7 @@ void CGauss::SecondaryAttack()
 		// ALERT( at_console, "%d %d %d\n", m_fInAttack, m_iSoundState, pitch );
 
 		if (m_iSoundState == 0)
-			ALERT(at_console, "sound state %d\n", m_iSoundState);
+			ALERT(at_debug, "sound state %d\n", m_iSoundState);
 
 		PLAYBACK_EVENT_FULL(FEV_NOTHOST, m_pPlayer->edict(), m_usGaussSpin, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, pitch, 0, (m_iSoundState == SND_CHANGE_PITCH) ? 1 : 0, 0);
 
@@ -266,7 +263,7 @@ void CGauss::SecondaryAttack()
 			SendStopEvent(false);
 
 #ifndef CLIENT_DLL
-			m_pPlayer->TakeDamage(CWorld::World->pev, CWorld::World->pev, 50, DMG_SHOCK);
+			m_pPlayer->TakeDamage(CWorld::Instance->pev, CWorld::Instance->pev, 50, DMG_SHOCK);
 			UTIL_ScreenFade(m_pPlayer, Vector(255, 128, 0), 2, 0.5, 128, FFADE_IN);
 #endif
 			SendWeaponAnim(GAUSS_IDLE);
@@ -322,7 +319,7 @@ void CGauss::StartFire()
 			m_pPlayer->pev->velocity = m_pPlayer->pev->velocity - gpGlobals->v_forward * flDamage * 5;
 		}
 
-		if (!g_pGameRules->IsMultiplayer())
+		if (!g_pGameRules->IsMultiplayer() && !g_allowGJump) //AJH allow SP gauss jumpflag
 
 		{
 			// in deathmatch, gauss can pop you up into the air. Not in single play.
