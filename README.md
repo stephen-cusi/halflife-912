@@ -3,6 +3,8 @@ About
 
 [Half-Life Updated](https://github.com/SamVanheer/halflife-updated), [Opposing Force Updated](https://github.com/SamVanheer/halflife-op4-updated) and [Blue Shift Updated](https://github.com/SamVanheer/halflife-bs-updated) are repositories that provide updated versions of the Half-Life SDK, targeted to the 3 Half-Life 1 PC games officially available.
 
+The 912Tale branch was created by dklt and developed by username7
+
 Purpose
 ======================
 
