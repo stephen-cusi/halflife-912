@@ -13,7 +13,7 @@ jobs:
       # CONFIGURATION: release
     # steps:
       # - name: Checkout
-        # uses: actions/checkout@v2
+        # uses: actions/checkout@v3
       # - name: Update system
         # run: sudo apt update
       # - name: Install G++ Multilib
@@ -21,7 +21,7 @@ jobs:
       # - name: Build
         # run: cd linux && CFG=release make
       # - name: Deploy
-        # uses: actions/upload-artifact@v2
+        # uses: actions/upload-artifact@v3
         # with:
           # name: Linux-x86
           # path: |
@@ -34,13 +34,13 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v1.0.2
       - name: Build
         run: MSBuild.exe projects/vs2019/projects.sln /p:Configuration=Release /p:Platform=Win32
       - name: Deploy
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Win32
           path: |
